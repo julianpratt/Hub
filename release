@@ -1,0 +1,30 @@
+#!/bin/bash
+if [ "${PWD##*/}" != "Hub" ]; then
+	echo "You must run release within the Hub folder"
+	exit
+elif [ "$1" == "" ]; then
+	echo "You must specify the version number you are creating with this release"
+	exit
+fi
+	version=$1
+
+	git commit -m "$version"
+	git push
+
+	gh release create $version --latest --title "Hub $version" --notes ""
+
+	echo "Building hub, please wait..."
+	runtimes=(linux-x64 linux-arm64 linux-arm)
+	for runtime in ${runtimes[@]}
+	do
+		dotnet publish -c Release --runtime=${runtime}
+		mv bin/Release/net8.0/${runtime}/publish/Hub hub_${runtime} 
+	done
+	
+	rm -f -r bin
+	rm -f -r obj
+
+	echo "Uploading hub, please be patient..."
+	gh release upload $version hub_*
+
+	echo rm hub_* 
